@@ -1533,7 +1533,7 @@ Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/qui
                                         color: mocha.base
                                     }
                                 }
-                                MouseArea { id: sysInfoMouse; hoverEnabled: true; anchors.fill: parent; }
+                                MouseArea { id: sysInfoMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle sysinfo"]) }
                             }
 
                             // Battery (or Power button for Desktop)

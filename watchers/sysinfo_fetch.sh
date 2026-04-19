@@ -40,9 +40,40 @@ get_cpu_percent() {
     fi
 }
 
-temp=$(get_cpu_temp)
-ram=$(get_ram_percent)
-cpu=$(get_cpu_percent)
+get_cpu_freq() {
+    local freq
+    freq=$(cat /sys/devices/system/cpu/cpu0/cpufreq/scaling_cur_freq 2>/dev/null | head -1)
+    if [ -n "$freq" ]; then
+        echo "$((freq / 1000))"
+    else
+        echo "0"
+    fi
+}
 
-jq -n -c --argjson temp "$temp" --argjson ram "$ram" --argjson cpu "$cpu" \
-    '{temp: $temp, ram: $ram, cpu: $cpu}'
+get_load_avg() {
+    cat /proc/loadavg 2>/dev/null | awk '{print $1}'
+}
+
+get_uptime() {
+    cat /proc/uptime 2>/dev/null | awk '{print $1}' | cut -d. -f1
+}
+
+get_processes() {
+    ps -eo pid= 2>/dev/null | wc -l
+}
+
+get_disk_percent() {
+    df -B1 / 2>/dev/null | awk 'NR==2 {print int($3*100/$2)}'
+}
+
+temp_val=$(get_cpu_temp)
+ram_pct=$(get_ram_percent)
+cpu_pct=$(get_cpu_percent)
+cpu_freq=$(get_cpu_freq)
+load_avg=$(get_load_avg)
+uptime_sec=$(get_uptime)
+proc_count=$(get_processes)
+disk_pct=$(get_disk_percent)
+
+jq -n -c --argjson temp "$temp_val" --argjson cpu "$cpu_pct" --argjson ram "$ram_pct" --argjson freq "$cpu_freq" --argjson load "$load_avg" --argjson uptime "$uptime_sec" --argjson procs "$proc_count" --argjson disk "$disk_pct" \
+    '{temp: $temp, cpu: $cpu, ram: $ram, freq: $freq, load: $load, uptime: $uptime, procs: $procs, disk: $disk}'
