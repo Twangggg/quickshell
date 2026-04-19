@@ -257,6 +257,8 @@ Variants {
             property string batIcon: "󰁹"
             property string batStatus: "Unknown"
             
+            property string sysInfo: ""
+
             property string kbLayout: "us"
             
             ListModel { id: workspacesModel }
@@ -522,8 +524,25 @@ Variants {
                     }
                 }
             }
-            Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/battery_wait.sh"]; onExited: { batteryPoller.running = false; batteryPoller.running = true; } }
+Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/battery_wait.sh"]; onExited: { batteryPoller.running = false; batteryPoller.running = true; } }
 
+            // --- SYSINFO ---
+            Process {
+                id: sysinfoPoller; running: true
+                command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/sysinfo_fetch.sh"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        let txt = this.text.trim();
+                        if (txt !== "") {
+                            try {
+                                let data = JSON.parse(txt);
+                                barWindow.sysInfo = data.temp.toString() + "° " + data.cpu + "% " + data.ram + "%";
+                            } catch(e) {}
+                        }
+                    }
+                }
+            }
+            Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true; onTriggered: { sysinfoPoller.running = false; sysinfoPoller.running = true; } }
 
             Process {
                 id: weatherPoller
@@ -1436,6 +1455,85 @@ Variants {
                                     }
                                 }
                                 MouseArea { id: volMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) }
+                            }
+
+                            // System Info (CPU, RAM, Temp)
+                            Rectangle {
+                                id: sysInfoPill
+                                property bool isHovered: sysInfoMouse.containsMouse
+                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                clip: true
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: barWindow.s(10)
+                                    opacity: 1.0
+                                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    gradient: Gradient {
+                                        orientation: Gradient.Horizontal
+                                        GradientStop { position: 0.0; color: mocha.teal }
+                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.teal, 1.3) }
+                                    }
+                                }
+
+                                property real targetWidth: sysInfoLayout.width + barWindow.s(24)
+                                width: targetWidth
+                                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+
+                                scale: isHovered ? 1.05 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                                Behavior on color { ColorAnimation { duration: 200 } }
+
+                                property bool initAnimTrigger: false
+                                Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 180; onTriggered: parent.initAnimTrigger = true }
+                                opacity: initAnimTrigger ? 1 : 0
+                                transform: Translate { y: parent.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+                                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+                                Row {
+                                    id: sysInfoLayout; anchors.centerIn: parent; spacing: barWindow.s(4)
+                                    // Temp
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰔏"
+                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        color: mocha.base
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: barWindow.sysInfo.split(" ")[0]
+                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
+                                        color: mocha.base
+                                    }
+                                    // CPU
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰘚"
+                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        color: mocha.base
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: barWindow.sysInfo.split(" ")[1]
+                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
+                                        color: mocha.base
+                                    }
+                                    // RAM
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰏰"
+                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        color: mocha.base
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: barWindow.sysInfo.split(" ")[2]
+                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
+                                        color: mocha.base
+                                    }
+                                }
+                                MouseArea { id: sysInfoMouse; hoverEnabled: true; anchors.fill: parent; }
                             }
 
                             // Battery (or Power button for Desktop)
