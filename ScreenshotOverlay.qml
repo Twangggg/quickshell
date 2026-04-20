@@ -104,6 +104,12 @@ PanelWindow {
     property real endX: hasValidCache ? (parseFloat(cachedParts[0]) + parseFloat(cachedParts[2])) : 0
     property real endY: hasValidCache ? (parseFloat(cachedParts[1]) + parseFloat(cachedParts[3])) : 0
     
+    // Fluid Geometry Snapping
+    Behavior on startX { enabled: !root.isSelecting; NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
+    Behavior on startY { enabled: !root.isSelecting; NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
+    Behavior on endX { enabled: !root.isSelecting; NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
+    Behavior on endY { enabled: !root.isSelecting; NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
+
     property bool hasSelection: hasValidCache
     property bool isSelecting: false
     property bool isMaximized: false
@@ -149,7 +155,7 @@ PanelWindow {
     }
 
     function toggleMaximize() {
-        if (root.isVideoMode) return; // Disable maximization toggle during video mode
+        if (root.isVideoMode) return;
         if (!isMaximized) {
             preStartX = root.startX; preStartY = root.startY;
             preEndX = root.endX; preEndY = root.endY;
@@ -169,6 +175,30 @@ PanelWindow {
     Shortcut { sequence: "Return"; onActivated: { if (root.hasSelection) root.executeCapture(root.isEditMode && !root.isVideoMode, root.isVideoMode) } }
     Shortcut { sequence: "Tab"; onActivated: root.isVideoMode = !root.isVideoMode }
 
+    // --- Animated Revealer for Fluid Transitions ---
+    component AnimWrap: Item {
+        property bool isShown: false
+        property real contentWidth: 0
+        property real rightPadding: s(8)
+        property real targetWidth: contentWidth + rightPadding
+        
+        width: isShown ? targetWidth : 0
+        height: parent.height
+        opacity: isShown ? 1.0 : 0.0
+        clip: true
+        
+        // Unifying duration and easing completely prevents "catching on" lag
+        Behavior on width { NumberAnimation { duration: 350; easing.type: Easing.OutQuart } }
+        Behavior on opacity { NumberAnimation { duration: 350; easing.type: Easing.OutQuart } }
+        
+        default property alias content: internalWrapper.children
+        Item { 
+            id: internalWrapper
+            width: contentWidth 
+            height: parent.height 
+        }
+    }
+
     // --- Global Reusable Toolbar Button ---
     component ToolbarBtn: Rectangle {
         id: tBtn
@@ -177,8 +207,8 @@ PanelWindow {
         property bool isDanger: false
         signal clicked()
 
-        Layout.preferredHeight: s(36)
-        Layout.preferredWidth: label !== "" ? (txt.implicitWidth + s(36)) : s(36)
+        height: parent.height
+        width: label !== "" ? (txt.implicitWidth + s(36)) : s(36)
         radius: s(18)
         color: maBtn.containsMouse ? (isDanger ? Qt.alpha(_theme.red, 0.2) : _theme.surface0) : "transparent"
         Behavior on color { ColorAnimation { duration: 150 } }
@@ -216,7 +246,6 @@ PanelWindow {
         }
     }
 
-    // The Main Selection Border
     Rectangle {
         visible: root.isSelecting || root.hasSelection
         x: root.selX; y: root.selY; width: root.selW; height: root.selH
@@ -265,37 +294,27 @@ PanelWindow {
         function getInteractionMode(mx, my, mods) {
             if (!root.hasSelection) return 1; 
             if (mods & Qt.ShiftModifier) return 2; 
-
             let margin = s(20) 
-            
-            // Check if mouse is on the specific coordinate lines
             let onLeftLine = Math.abs(mx - root.selX) <= margin; 
             let onRightLine = Math.abs(mx - (root.selX + root.selW)) <= margin
             let onTopLine = Math.abs(my - root.selY) <= margin; 
             let onBottomLine = Math.abs(my - (root.selY + root.selH)) <= margin
-
-            // Check if mouse is actually within the span of the selection (plus margin)
             let withinX = mx >= (root.selX - margin) && mx <= (root.selX + root.selW + margin);
             let withinY = my >= (root.selY - margin) && my <= (root.selY + root.selH + margin);
 
-            // Corner checks (always require being on both lines)
             if (onTopLine && onLeftLine) return 3; 
             if (onTopLine && onRightLine) return 5;
             if (onBottomLine && onLeftLine) return 8; 
             if (onBottomLine && onRightLine) return 10;
-            
-            // Edge checks (require being on the line AND within the perpendicular bounds)
             if (onTopLine && withinX) return 4; 
             if (onBottomLine && withinX) return 9;
             if (onLeftLine && withinY) return 6; 
             if (onRightLine && withinY) return 7;
-            
             return 1;
         }
 
         onPositionChanged: (mouse) => {
             if (root.isVideoMode) { cursorShape = Qt.ArrowCursor; return; }
-
             let mode = root.isSelecting ? root.interactionMode : getInteractionMode(mouse.x, mouse.y, mouse.modifiers)
             switch(mode) {
                 case 2: cursorShape = Qt.ClosedHandCursor; break;
@@ -359,26 +378,137 @@ PanelWindow {
     }
 
     // --- Main Bottom Toolbar ---
-    Rectangle {
+    Item {
         id: toolbar
         z: 30 
         
-        property bool fitsOutsideBottom: (root.selY + root.selH + height + s(15)) <= root.height
-        property bool fitsOutsideTop: (root.selY - height - s(15)) >= 0
-        property bool fitsInside: root.selH >= (height + s(30)) && root.selW >= (width + s(20))
+        // Fully expanded height for the wider bell radius
+        property bool fitsOutsideBottom: (root.selY + root.selH + s(112) + s(15)) <= root.height
+        property bool popUpwards: !fitsOutsideBottom
 
-        visible: root.hasSelection && !root.isSelecting && (fitsOutsideBottom || fitsOutsideTop || fitsInside) && !root.isScanningQr && !root.showQrPopup
+        visible: root.hasSelection && !root.isSelecting && !root.isScanningQr && !root.showQrPopup
+        
+        width: Math.max(toolbarRow.width + s(32), s(200))
+        height: s(112) 
+
         x: Math.max(s(10), Math.min(parent.width - width - s(10), root.selX + (root.selW / 2) - (width / 2)))
-        y: fitsOutsideBottom ? (root.selY + root.selH + s(15)) : (fitsOutsideTop ? (root.selY - height - s(15)) : (root.selY + root.selH - height - s(15)))
+        y: fitsOutsideBottom ? (root.selY + root.selH + s(15)) : 
+           ((root.selY - height - s(15)) >= 0 ? (root.selY - height - s(15)) : (root.height - height - s(15)))
 
-        width: toolbarLayout.width + s(16)
-        height: s(52)
-        radius: s(26)
-        color: _theme.base
-        border.color: _theme.surface1
-        border.width: s(2)
+        // The Melting Bell Background (Ultra Wide Base Edition)
+        Canvas {
+            id: bgCanvas
+            anchors.fill: parent
+            renderTarget: Canvas.FramebufferObject // Smooth rendering
+            property bool up: toolbar.popUpwards
+            property real cw: width
+            property real ch: height
+            property color themeBase: _theme.base
+            property color themeBorder: _theme.surface1
+            
+            onUpChanged: requestPaint()
+            onCwChanged: requestPaint()
+            onChChanged: requestPaint()
+            onThemeBaseChanged: requestPaint()
+            onThemeBorderChanged: requestPaint()
 
-        property bool popUpwards: (toolbar.y + s(200)) > root.height
+            onPaint: {
+                var ctx = getContext("2d");
+                ctx.reset();
+                let s = root.s;
+                let w = cw;
+                let totalH = ch;
+                
+                let h = s(52);     // Standard pill height
+                let r = s(26);     // Pill corner radius
+                let cx = w / 2;    // Center X
+                let cy = s(70);    // Center Y for the protruding bell
+                let br = s(42);    // INCREASED for heavily widened skirt
+                
+                // Maximize the melt starting point to the very edge of the pill's radius
+                let meltBase = w / 2 - r; 
+
+                ctx.fillStyle = themeBase;
+                ctx.strokeStyle = themeBorder;
+                ctx.lineWidth = s(2);
+                ctx.lineJoin = "round";
+
+                ctx.save();
+                if (up) {
+                    ctx.translate(0, totalH);
+                    ctx.scale(1, -1);
+                }
+
+                ctx.beginPath();
+                ctx.moveTo(r, 0);
+                ctx.lineTo(w - r, 0);
+                ctx.arcTo(w, 0, w, r, r);
+                ctx.arcTo(w, h, w - r, h, r);
+                
+                // Extremely wide left-to-right sweeping skirt
+                ctx.bezierCurveTo(
+                    cx + meltBase * 0.4, h,           // H1: Pull aggressively left along the flat pill bottom
+                    cx + br * 1.5, cy - s(15),        // H2: Pull up and right from the bell's outer arc
+                    cx + br, cy                       // End at bell right edge
+                );
+                
+                // Bottom arc of the wide bell
+                ctx.arc(cx, cy, br, 0, Math.PI);
+                
+                // Extremely wide right-to-left sweeping skirt back to the pill
+                ctx.bezierCurveTo(
+                    cx - br * 1.5, cy - s(15),        
+                    cx - meltBase * 0.4, h,           
+                    cx - meltBase, h                  
+                );
+                
+                ctx.lineTo(r, h);
+                ctx.arcTo(0, h, 0, r, r);
+                ctx.arcTo(0, 0, r, 0, r);
+                ctx.closePath();
+
+                ctx.fill();
+                ctx.stroke();
+                ctx.restore();
+            }
+        }
+
+        // Action Button dynamically tracking the deeper Canvas
+        Item {
+            id: actionBtnContainer
+            width: root.s(48)
+            height: root.s(48)
+            x: parent.width / 2 - root.s(24)
+            y: toolbar.popUpwards ? root.s(18) : root.s(46)
+            z: 10
+            
+            Rectangle {
+                anchors.fill: parent
+                radius: width / 2
+                color: "transparent"
+                border.color: root.isVideoMode ? _theme.red : _theme.text
+                border.width: root.s(3)
+                Behavior on border.color { ColorAnimation { duration: 250 } }
+            }
+
+            Rectangle {
+                width: actionArea.pressed ? root.s(28) : root.s(36)
+                height: width
+                radius: width / 2
+                anchors.centerIn: parent
+                color: root.isVideoMode ? _theme.red : _theme.text
+                Behavior on color { ColorAnimation { duration: 250 } }
+                Behavior on width { NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
+            }
+
+            MouseArea {
+                id: actionArea
+                anchors.fill: parent
+                hoverEnabled: true
+                cursorShape: Qt.PointingHandCursor
+                onClicked: root.executeCapture(false, root.isVideoMode)
+            }
+        }
 
         component AudioControl: RowLayout {
             property string iconOn: ""
@@ -451,8 +581,8 @@ PanelWindow {
             visible: false
             width: s(280)
             height: micModel.count === 0 ? s(40) : Math.min(s(180), micModel.count * s(36))
-            x: micAudio.x - s(40)
-            y: toolbar.popUpwards ? (-height - s(8)) : (toolbar.height + s(8))
+            x: -s(140) 
+            y: toolbar.popUpwards ? (root.s(112) - root.s(52) - height - s(8)) : (root.s(52) + s(8))
             color: _theme.base
             border.color: _theme.surface1; border.width: s(2)
             radius: s(8)
@@ -486,66 +616,115 @@ PanelWindow {
             }
         }
 
-        RowLayout {
-            id: toolbarLayout
-            anchors.centerIn: parent
-            spacing: s(8)
+        // Perfectly Fluid Internal Layout Row
+        Row {
+            id: toolbarRow
+            x: (parent.width - width) / 2
+            y: toolbar.popUpwards ? root.s(112) - root.s(52) + (root.s(52) - height) / 2 : (root.s(52) - height) / 2
+            height: root.s(36)
+            spacing: 0 // ZERO SPACING: Eliminates phantom 8px snap jumps
 
-            Rectangle {
-                width: s(80); height: s(36); radius: s(18)
-                color: _theme.surface0
-                
-                RowLayout {
-                    anchors.fill: parent; anchors.margins: s(4); spacing: 0
+            // Tab Switcher
+            Item {
+                width: s(110) + s(8); height: parent.height
+                Rectangle {
+                    width: s(110); height: s(36); radius: s(18) 
+                    color: _theme.surface0
+                    
                     Rectangle {
-                        Layout.fillWidth: true; Layout.fillHeight: true; radius: s(14)
-                        color: !root.isVideoMode ? _theme.surface2 : "transparent"
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: "󰄄"; color: !root.isVideoMode ? _theme.text : _theme.subtext0; font.pixelSize: s(16) }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.isVideoMode = false }
+                        x: root.isVideoMode ? parent.width / 2 : s(2)
+                        y: s(2)
+                        width: parent.width / 2 - s(2)
+                        height: parent.height - s(4)
+                        radius: s(16) 
+                        color: _theme.surface2
+                        Behavior on x { NumberAnimation { duration: 350; easing.type: Easing.OutExpo } }
                     }
-                    Rectangle {
-                        Layout.fillWidth: true; Layout.fillHeight: true; radius: s(14)
-                        color: root.isVideoMode ? _theme.surface2 : "transparent"
-                        Behavior on color { ColorAnimation { duration: 200 } }
-                        Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: ""; color: root.isVideoMode ? _theme.text : _theme.subtext0; font.pixelSize: s(16) }
-                        MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.isVideoMode = true }
+                    
+                    Row {
+                        anchors.fill: parent
+                        Item {
+                            width: parent.width / 2; height: parent.height
+                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: "󰄄"; color: !root.isVideoMode ? _theme.text : _theme.subtext0; font.pixelSize: s(16) }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.isVideoMode = false }
+                        }
+                        Item {
+                            width: parent.width / 2; height: parent.height
+                            Text { anchors.centerIn: parent; font.family: "Iosevka Nerd Font"; text: ""; color: root.isVideoMode ? _theme.text : _theme.subtext0; font.pixelSize: s(16) }
+                            MouseArea { anchors.fill: parent; cursorShape: Qt.PointingHandCursor; onClicked: root.isVideoMode = true }
+                        }
                     }
                 }
             }
 
-            Rectangle { width: s(2); Layout.fillHeight: true; Layout.topMargin: s(10); Layout.bottomMargin: s(10); color: _theme.surface0; radius: s(1) }
-
-            AudioControl { 
-                id: deskAudio; visible: root.isVideoMode; iconOn: "󰓃"; iconOff: "󰓄" 
-                volumeValue: root.deskVol; mutedValue: root.deskMute
-                onVolumeUpdate: (v) => { root.deskVol = v; root.saveAudioPrefs() }
-                onMuteUpdate: (m) => { root.deskMute = m; root.saveAudioPrefs() }
-            }
-            
-            AudioControl { 
-                id: micAudio; visible: root.isVideoMode; iconOn: "󰍬"; iconOff: "󰍭"; hasDropdown: true
-                volumeValue: root.micVol; mutedValue: root.micMute
-                onVolumeUpdate: (v) => { root.micVol = v; root.saveAudioPrefs() }
-                onMuteUpdate: (m) => { root.micMute = m; root.saveAudioPrefs() }
-                onDropdownClicked: micDropdown.visible = !micDropdown.visible
+            // Video Controls
+            AnimWrap {
+                isShown: root.isVideoMode; contentWidth: s(2)
+                Rectangle { width: s(2); height: s(16); anchors.verticalCenter: parent.verticalCenter; color: _theme.surface0; radius: s(1) }
             }
 
-            Rectangle { visible: root.isVideoMode; width: s(2); Layout.fillHeight: true; Layout.topMargin: s(10); Layout.bottomMargin: s(10); color: _theme.surface0; radius: s(1) }
-
-            ToolbarBtn { visible: !root.isVideoMode; iconTxt: "󰄄"; label: "Capture"; onClicked: root.executeCapture(false, false) }
-            ToolbarBtn { visible: root.isVideoMode; iconTxt: "󰑊"; label: "Record"; isDanger: true; onClicked: root.executeCapture(false, true) }
-
-            ToolbarBtn { visible: !root.isVideoMode; iconTxt: "󰏫"; onClicked: root.executeCapture(true, false) }
-            ToolbarBtn { visible: !root.isVideoMode; iconTxt: "⿻"; onClicked: root.performQrScan() }
-
-            Rectangle { width: s(2); Layout.fillHeight: true; Layout.topMargin: s(10); Layout.bottomMargin: s(10); color: _theme.surface0; radius: s(1) }
+            AnimWrap {
+                isShown: root.isVideoMode; contentWidth: s(94)
+                AudioControl { 
+                    id: deskAudio; width: parent.width; height: parent.height
+                    iconOn: "󰓃"; iconOff: "󰓄" 
+                    volumeValue: root.deskVol; mutedValue: root.deskMute
+                    onVolumeUpdate: (v) => { root.deskVol = v; root.saveAudioPrefs() }
+                    onMuteUpdate: (m) => { root.deskMute = m; root.saveAudioPrefs() }
+                }
+            }
             
-            ToolbarBtn { visible: !root.isVideoMode; iconTxt: root.isMaximized ? "" : ""; onClicked: root.toggleMaximize() }
-            ToolbarBtn { iconTxt: "󰅖"; isDanger: true; onClicked: Qt.quit() }
+            AnimWrap {
+                isShown: root.isVideoMode; contentWidth: s(118)
+                AudioControl { 
+                    id: micAudio; width: parent.width; height: parent.height
+                    iconOn: "󰍬"; iconOff: "󰍭"; hasDropdown: true
+                    volumeValue: root.micVol; mutedValue: root.micMute
+                    onVolumeUpdate: (v) => { root.micVol = v; root.saveAudioPrefs() }
+                    onMuteUpdate: (m) => { root.micMute = m; root.saveAudioPrefs() }
+                    onDropdownClicked: { micDropdown.visible = !micDropdown.visible; micDropdown.x = mapToItem(toolbar, 0, 0).x - s(120) }
+                }
+            }
+
+            // Image Controls
+            AnimWrap {
+                isShown: !root.isVideoMode; contentWidth: s(2)
+                Rectangle { width: s(2); height: s(16); anchors.verticalCenter: parent.verticalCenter; color: _theme.surface0; radius: s(1) }
+            }
+
+            AnimWrap {
+                isShown: !root.isVideoMode; contentWidth: s(36)
+                ToolbarBtn { iconTxt: "󰏫"; onClicked: root.executeCapture(true, false) }
+            }
+
+            AnimWrap {
+                isShown: !root.isVideoMode; contentWidth: s(36)
+                ToolbarBtn { iconTxt: "⿻"; onClicked: root.performQrScan() }
+            }
+
+            AnimWrap {
+                isShown: !root.isVideoMode; contentWidth: s(2)
+                Rectangle { width: s(2); height: s(16); anchors.verticalCenter: parent.verticalCenter; color: _theme.surface0; radius: s(1) }
+            }
+            
+            AnimWrap {
+                isShown: !root.isVideoMode; contentWidth: s(36)
+                ToolbarBtn { iconTxt: root.isMaximized ? "" : ""; onClicked: root.toggleMaximize() }
+            }
+
+            // Universal Close Button
+            Item {
+                width: s(2) + s(8) + s(36); height: parent.height
+                Row {
+                    spacing: s(8)
+                    Rectangle { width: s(2); height: s(16); anchors.verticalCenter: parent.verticalCenter; color: _theme.surface0; radius: s(1);}
+                    ToolbarBtn { iconTxt: "󰅖"; isDanger: true; onClicked: Qt.quit() }
+                }
+            }
         }
     }
 
+    // --- QR Popup and Backend Hooks ---
     Repeater {
         model: qrModel
         delegate: Rectangle {
@@ -564,7 +743,6 @@ PanelWindow {
             border.width: s(2)
 
             property bool isHovered: maHover.containsMouse
-
             scale: isHovered ? 1.0 : model.qBaseScale
             z: isHovered ? 100 : (40 - index)
             transformOrigin: Item.Center
@@ -729,11 +907,10 @@ PanelWindow {
         qrWaitTimer.start()
     }   
     
-    // Add this Timer alongside your other timers (e.g. near qrWaitTimer)
     Timer {
         id: captureTimer
         property string pendingCmd: ""
-        interval: 80   // enough for Hyprland to actually unmap the surface
+        interval: 80
         repeat: false
         onTriggered: {
             Quickshell.execDetached(["bash", "-c", pendingCmd])
@@ -751,8 +928,8 @@ PanelWindow {
         }
         if (openEditor) cmd += " --edit"
     
-        root.visible = false          // hide overlay immediately
+        root.visible = false
         captureTimer.pendingCmd = cmd
-        captureTimer.start()          // fire grim only after compositor unmaps us
+        captureTimer.start()
     }
 }

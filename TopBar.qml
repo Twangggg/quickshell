@@ -87,6 +87,14 @@ Variants {
             property real targetSidebarHoleWidth: isSettingsOpen ? s(420) : 0
             property real sidebarHoleWidth: targetSidebarHoleWidth
             Behavior on sidebarHoleWidth { NumberAnimation { duration: 600; easing.type: Easing.OutExpo } }
+	    
+	    onSidebarHoleWidthChanged: {
+                if (barWindow.sidebarHoleWidth <= 0.01 && barWindow.pendingReload) {
+                    barWindow.pendingReload = false;
+                    Quickshell.reload(true);
+                }
+	    }
+
 
             mask: Region { item: sidebarHole; intersection: Intersection.Xor }
             
@@ -477,7 +485,8 @@ Variants {
                     }
                 }
             }
-        Process { id: networkWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/network_wait.sh"]; onExited: { networkPoller.running = false; networkPoller.running = true; } }
+            Process { id: networkWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/network_wait.sh"]; onExited: { networkPoller.running = false; networkPoller.running = true; } }
+
 
             // --- BLUETOOTH ---
             Process {
@@ -764,10 +773,9 @@ Variants {
                     property real targetWidth: workspacesModel.count > 0 ? wsLayout.implicitWidth + barWindow.s(20) : 0
                     
                     // Left-to-Right train logic (Settings Closed)
-                    property real defaultX: leftContent.width + barWindow.s(8)
-                    // Right-to-Left train logic (Settings Open)
-                    property real settingsX: mediaBox.settingsX - targetWidth - (targetWidth > 0 ? barWindow.s(8) : 0)
-                    
+		    property real defaultX: leftContent.width + barWindow.s(4)
+		    property real settingsX: mediaBox.settingsX - targetWidth - (targetWidth > 0 ? barWindow.s(4) : 0)
+		                        
                     property real targetX: barWindow.isSettingsOpen ? settingsX : defaultX
                     x: targetX
                     Behavior on x { 
@@ -883,10 +891,9 @@ Variants {
                     property real targetWidth: barWindow.isMediaActive ? mediaLayoutContainer.width + barWindow.s(24) : 0
 
                     // Left-to-Right train logic (Settings Closed)
-                    property real defaultX: workspacesBox.defaultX + workspacesBox.targetWidth + (workspacesBox.targetWidth > 0 ? barWindow.s(8) : 0)
-                    // Right-to-Left train logic (Settings Open)
-                    property real settingsX: centerBox.settingsX - targetWidth - (targetWidth > 0 ? barWindow.s(8) : 0)
-                    
+		    property real defaultX: workspacesBox.defaultX + workspacesBox.targetWidth + (workspacesBox.targetWidth > 0 ? barWindow.s(4) : 0)
+		    property real settingsX: centerBox.settingsX - targetWidth - (targetWidth > 0 ? barWindow.s(4) : 0)
+
                     property real targetX: barWindow.isSettingsOpen ? settingsX : defaultX
                     x: targetX
                     Behavior on x { 
@@ -1040,11 +1047,10 @@ Variants {
                     
                     // Left-to-Right train logic (Settings Closed) - Takes absolute center if not overflowing
                     property real pureCenter: (parent.width - targetWidth) / 2
-                    property real minCenterDefaultX: mediaBox.defaultX + mediaBox.targetWidth + (mediaBox.targetWidth > 0 ? barWindow.s(8) : 0)
+                    // Change these two lines:
+		    property real minCenterDefaultX: mediaBox.defaultX + mediaBox.targetWidth + (mediaBox.targetWidth > 0 ? barWindow.s(4) : 0)
+		    property real settingsX: barWindow.width - rightContent.width - targetWidth - barWindow.s(4)
                     property real defaultX: Math.max(minCenterDefaultX, pureCenter)
-                    
-                    // Right-to-Left train logic (Settings Open) - Anchors tightly to the far right modules
-                    property real settingsX: barWindow.width - rightContent.width - targetWidth - barWindow.s(8)
                     
                     property real targetX: barWindow.isSettingsOpen ? settingsX : defaultX
                     x: targetX
