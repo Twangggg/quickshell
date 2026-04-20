@@ -826,14 +826,27 @@ Variants {
                                 Behavior on targetWidth { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
                                 
                                 height: barWindow.s(32); radius: barWindow.s(10)
+                                clip: true
                                 
-                                color: stateLabel === "active" 
-                                        ? mocha.mauve 
-                                        : (isHovered 
-                                            ? Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9) 
-                                            : (stateLabel === "occupied" 
-                                                ? Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9) 
-                                                : "transparent"))
+                                // Keep the base pill subtle; active state uses a softer gradient layer below.
+                                color: (isHovered && stateLabel !== "active")
+                                        ? Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9)
+                                        : (stateLabel === "occupied"
+                                            ? Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9)
+                                            : "transparent")
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: wsPill.radius
+                                    visible: stateLabel === "active"
+                                    opacity: 0.92
+                                    gradient: Gradient {
+                                        // Softer "depth" gradient: slightly brighter top, slightly deeper bottom
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.mauve, 1.10) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.mauve, 1.18) }
+                                    }
+                                }
 
                                 scale: isHovered && stateLabel !== "active" ? 1.08 : 1.0
                                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
@@ -1315,9 +1328,10 @@ Variants {
                                     opacity: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? 1.0 : 0.0) : (barWindow.isWifiOn ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.blue }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.blue, 1.3) }
+                                        // Subtle, less "neon" gradient to match dark bar
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.blue, 1.08) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.blue, 1.16) }
                                     }
                                 }
 
@@ -1370,9 +1384,9 @@ Variants {
                                     opacity: barWindow.isBtOn ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.mauve }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.mauve, 1.3) }
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.mauve, 1.08) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.mauve, 1.16) }
                                     }
                                 }
 
@@ -1420,9 +1434,9 @@ Variants {
                                     opacity: barWindow.isSoundActive ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.peach }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.peach, 1.3) }
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.peach, 1.07) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.peach, 1.17) }
                                     }
                                 }
                                 
@@ -1471,9 +1485,9 @@ Variants {
                                     opacity: 1.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.teal }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.teal, 1.3) }
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.teal, 1.06) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.teal, 1.16) }
                                     }
                                 }
 
@@ -1551,9 +1565,17 @@ Variants {
                                     opacity: 1.0 
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: barWindow.isDesktop ? mocha.red : barWindow.batDynamicColor; Behavior on color { ColorAnimation { duration: 300 } } }
-                                        GradientStop { position: 1.0; color: barWindow.isDesktop ? Qt.lighter(mocha.red, 1.3) : Qt.lighter(barWindow.batDynamicColor, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
+                                        orientation: Gradient.Vertical
+                                        GradientStop {
+                                            position: 0.0
+                                            color: barWindow.isDesktop ? Qt.lighter(mocha.red, 1.08) : Qt.lighter(barWindow.batDynamicColor, 1.08)
+                                            Behavior on color { ColorAnimation { duration: 300 } }
+                                        }
+                                        GradientStop {
+                                            position: 1.0
+                                            color: barWindow.isDesktop ? Qt.darker(mocha.red, 1.16) : Qt.darker(barWindow.batDynamicColor, 1.16)
+                                            Behavior on color { ColorAnimation { duration: 300 } }
+                                        }
                                     }
                                 }
                                 
