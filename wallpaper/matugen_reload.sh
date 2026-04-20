@@ -233,6 +233,7 @@ TEXT_FILES=(
     "$HOME/.config/cava/colors"
     "$HOME/.config/swayosd/style.css"
     "$HOME/.config/rofi/theme.rasi"
+    "$HOME/.config/rofi/matugen-palette.rasi"
     "$HOME/.cache/matugen/colors-gtk.css"
     "$HOME/.config/qt5ct/colors/matugen.conf"
     "$HOME/.config/qt6ct/colors/matugen.conf"
@@ -254,6 +255,13 @@ done
 # ------------------------------------------------------------------------------
 # 3. Reload System Components
 # ------------------------------------------------------------------------------
+
+# Keep Rofi launcher background in sync with current wallpaper.
+# Quickshell wallpaper picker already writes /tmp/lock_bg.png; we mirror to a stable path.
+if [ -f /tmp/lock_bg.png ]; then
+    mkdir -p "$HOME/.config/rofi/images"
+    cp -f /tmp/lock_bg.png "$HOME/.config/rofi/images/wallpaper.png" 2>/dev/null || true
+fi
 
 # Reload Kitty instances
 killall -USR1 kitty
