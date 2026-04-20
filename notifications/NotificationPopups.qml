@@ -5,7 +5,7 @@ import QtQuick.Layouts
 import Quickshell
 import Quickshell.Wayland
 import Quickshell.Io 
-import "../" 
+import ".." as Root
 import "../WindowRegistry.js" as Registry
 
 PanelWindow {
@@ -68,7 +68,7 @@ PanelWindow {
         visible: opacity > 0.01 // Only hide completely when the fade out is basically done
         Behavior on opacity { NumberAnimation { duration: 300 } }
 
-        MatugenColors { id: _theme }
+        Root.MatugenColors { id: _theme }
 
         property var blobPalette1: [_theme.mauve, _theme.blue, _theme.peach, _theme.green, _theme.pink]
         property var blobPalette2: [_theme.sapphire, _theme.teal, _theme.maroon, _theme.yellow, _theme.red]
