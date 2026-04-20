@@ -4,11 +4,12 @@
 # 1. Flatten Matugen v4.0 Nested JSON for Quickshell
 # ------------------------------------------------------------------------------
 # Updated to match your config.toml output path
-QS_JSON="~/.config/hypr/scripts/quickshell/qs_colors.json"
+QS_JSON="$HOME/.config/hypr/scripts/quickshell/qs_colors.json"
 
 python3 -c '
 import json
 import sys
+import os
 
 def flatten_colors(obj):
     if isinstance(obj, dict):
@@ -19,12 +20,169 @@ def flatten_colors(obj):
         return [flatten_colors(x) for x in obj]
     return obj
 
+def _hex_to_rgb(h):
+    h = h.strip()
+    if h.startswith("#"):
+        h = h[1:]
+    if len(h) != 6:
+        return None
+    try:
+        return int(h[0:2], 16), int(h[2:4], 16), int(h[4:6], 16)
+    except Exception:
+        return None
+
+def _rgb_to_hex(rgb):
+    r, g, b = rgb
+    r = max(0, min(255, int(r)))
+    g = max(0, min(255, int(g)))
+    b = max(0, min(255, int(b)))
+    return f"#{r:02x}{g:02x}{b:02x}"
+
+def _to_gray(hex_color):
+    rgb = _hex_to_rgb(hex_color)
+    if rgb is None:
+        return hex_color
+    r, g, b = rgb
+    # sRGB luminance, keeps perceived brightness but removes hue
+    y = 0.2126 * r + 0.7152 * g + 0.0722 * b
+    return _rgb_to_hex((y, y, y))
+
+def _rgb_to_hsl(r, g, b):
+    r, g, b = r / 255.0, g / 255.0, b / 255.0
+    mx = max(r, g, b)
+    mn = min(r, g, b)
+    l = (mx + mn) / 2.0
+    if mx == mn:
+        return 0.0, 0.0, l
+    d = mx - mn
+    s = d / (2.0 - mx - mn) if l > 0.5 else d / (mx + mn)
+    if mx == r:
+        h = (g - b) / d + (6.0 if g < b else 0.0)
+    elif mx == g:
+        h = (b - r) / d + 2.0
+    else:
+        h = (r - g) / d + 4.0
+    h /= 6.0
+    return h, s, l
+
+def _hue2rgb(p, q, t):
+    if t < 0.0:
+        t += 1.0
+    if t > 1.0:
+        t -= 1.0
+    if t < 1.0 / 6.0:
+        return p + (q - p) * 6.0 * t
+    if t < 1.0 / 2.0:
+        return q
+    if t < 2.0 / 3.0:
+        return p + (q - p) * (2.0 / 3.0 - t) * 6.0
+    return p
+
+def _hsl_to_rgb(h, s, l):
+    if s <= 0.000001:
+        v = int(round(l * 255.0))
+        return v, v, v
+    q = l * (1.0 + s) if l < 0.5 else l + s - l * s
+    p = 2.0 * l - q
+    r = _hue2rgb(p, q, h + 1.0 / 3.0)
+    g = _hue2rgb(p, q, h)
+    b = _hue2rgb(p, q, h - 1.0 / 3.0)
+    return int(round(r * 255.0)), int(round(g * 255.0)), int(round(b * 255.0))
+
+def _mix(hex_a, hex_b, t):
+    ra = _hex_to_rgb(hex_a)
+    rb = _hex_to_rgb(hex_b)
+    if ra is None or rb is None:
+        return hex_a
+    t = max(0.0, min(1.0, float(t)))
+    r = ra[0] * (1.0 - t) + rb[0] * t
+    g = ra[1] * (1.0 - t) + rb[1] * t
+    b = ra[2] * (1.0 - t) + rb[2] * t
+    return _rgb_to_hex((r, g, b))
+
+def _tame_accent(hex_color, *, sat_mul, mix_with, mix_t):
+    rgb = _hex_to_rgb(hex_color)
+    if rgb is None:
+        return hex_color
+    h, s, l = _rgb_to_hsl(*rgb)
+    s = max(0.0, min(1.0, s * sat_mul))
+    rr, gg, bb = _hsl_to_rgb(h, s, l)
+    out = _rgb_to_hex((rr, gg, bb))
+    return _mix(out, mix_with, mix_t) if isinstance(mix_with, str) else out
+
+def _sat(hex_color):
+    rgb = _hex_to_rgb(hex_color)
+    if rgb is None:
+        return None
+    _, s, _ = _rgb_to_hsl(*rgb)
+    return s
+
+def maybe_apply_monochrome(flat_data):
+    # Toggle lives in ~/.config/hypr/scripts/settings.json
+    settings_path = os.path.join(os.path.expanduser("~"), ".config/hypr/scripts/settings.json")
+    try:
+        with open(settings_path, "r") as sf:
+            settings = json.load(sf)
+    except Exception:
+        settings = {}
+
+    mode = (settings.get("matugenAccentMode") or "").strip().lower()
+    if settings.get("matugenMonochrome", False):
+        mode = "monochrome"
+    if mode == "":
+        mode = "balanced"
+
+    # Only desaturate accent tokens; keep surfaces/text as-is.
+    accent_keys = [
+        "blue", "sapphire", "peach", "green", "red",
+        "mauve", "pink", "yellow", "maroon", "teal",
+    ]
+    if mode == "monochrome":
+        for k in accent_keys:
+            if isinstance(flat_data.get(k), str):
+                flat_data[k] = _to_gray(flat_data[k])
+        return flat_data
+
+    if mode == "balanced":
+        base = flat_data.get("base", "#000000")
+        # Keep a few "main" accents faithful to Matugen; tame the rest.
+        # Also keep peach/teal/green so Volume/System/Battery stay colorful.
+        keep = {"blue", "mauve", "red", "peach", "teal", "green"}  # primary-ish + system highlights + error
+        for k in accent_keys:
+            if not isinstance(flat_data.get(k), str):
+                continue
+            if k in keep:
+                continue
+            # Reduce saturation and blend slightly towards base for harmony.
+            flat_data[k] = _tame_accent(flat_data[k], sat_mul=0.35, mix_with=base, mix_t=0.22)
+
+        # If Matugen emits very low-chroma secondary/tertiary (common on B/W wallpapers),
+        # derive them as harmonious variants of primary so modules do not look "stuck gray".
+        primary = flat_data.get("blue") or flat_data.get("mauve")
+        if isinstance(primary, str):
+            for k, (sat_mul, mix_t) in {
+                "green": (0.75, 0.08),
+                "teal": (0.60, 0.14),
+                "peach": (0.50, 0.20),
+            }.items():
+                v = flat_data.get(k)
+                if not isinstance(v, str):
+                    continue
+                s = _sat(v)
+                if s is not None and s < 0.10:
+                    flat_data[k] = _tame_accent(primary, sat_mul=sat_mul, mix_with=base, mix_t=mix_t)
+        return flat_data
+
+    # fallback: do nothing
+    return flat_data
+
 target_file = sys.argv[1]
 try:
     with open(target_file, "r") as f:
         data = json.load(f)
     
     flat_data = flatten_colors(data)
+    flat_data = maybe_apply_monochrome(flat_data)
     
     with open(target_file, "w") as f:
         json.dump(flat_data, f, indent=4)

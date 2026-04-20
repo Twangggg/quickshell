@@ -199,7 +199,7 @@ PanelWindow {
     }
 
     onIsVisibleChanged: {
-        if (isVisible) widgetStack.forceActiveFocus();
+        if (isVisible) masterWindow.requestActivate();
     }
 
     Item {

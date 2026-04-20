@@ -239,7 +239,14 @@ Item {
                 ${lockBgCmd} || true
                 pkill mpvpaper || true
                 
-                ( matugen image "$THUMB_FILE" --source-color-index 0 || true; bash "$RELOAD_SCRIPT" || true ) &
+                (
+                    MATUGEN_SRC="$THUMB_FILE"
+                    if [ ! -f "$MATUGEN_SRC" ]; then
+                        MATUGEN_SRC="$WALL_FILE"
+                    fi
+                    matugen image "$MATUGEN_SRC" --source-color-index 0 || true
+                    bash "$RELOAD_SCRIPT" || true
+                ) &
                 MATUGEN_PID=$!
                 
                 ${wallpaperCmd}

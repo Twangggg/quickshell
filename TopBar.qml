@@ -265,6 +265,8 @@ Variants {
             property string batIcon: "󰁹"
             property string batStatus: "Unknown"
             
+            property string sysInfo: ""
+
             property string kbLayout: "us"
             
             ListModel { id: workspacesModel }
@@ -533,6 +535,23 @@ Variants {
             }
             Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/battery_wait.sh"]; onExited: { batteryPoller.running = false; batteryPoller.running = true; } }
 
+            // --- SYSINFO ---
+            Process {
+                id: sysinfoPoller; running: true
+                command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/sysinfo_fetch.sh"]
+                stdout: StdioCollector {
+                    onStreamFinished: {
+                        let txt = this.text.trim();
+                        if (txt !== "") {
+                            try {
+                                let data = JSON.parse(txt);
+                                barWindow.sysInfo = data.temp.toString() + "° " + data.cpu + "% " + data.ram + "%";
+                            } catch(e) {}
+                        }
+                    }
+                }
+            }
+            Timer { interval: 2000; running: true; repeat: true; triggeredOnStart: true; onTriggered: { sysinfoPoller.running = false; sysinfoPoller.running = true; } }
 
             Process {
                 id: weatherPoller
@@ -815,14 +834,27 @@ Variants {
                                 Behavior on targetWidth { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
                                 
                                 height: barWindow.s(32); radius: barWindow.s(10)
+                                clip: true
                                 
-                                color: stateLabel === "active" 
-                                        ? mocha.mauve 
-                                        : (isHovered 
-                                            ? Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9) 
-                                            : (stateLabel === "occupied" 
-                                                ? Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9) 
-                                                : "transparent"))
+                                // Keep the base pill subtle; active state uses a softer gradient layer below.
+                                color: (isHovered && stateLabel !== "active")
+                                        ? Qt.rgba(mocha.overlay0.r, mocha.overlay0.g, mocha.overlay0.b, 0.9)
+                                        : (stateLabel === "occupied"
+                                            ? Qt.rgba(mocha.surface2.r, mocha.surface2.g, mocha.surface2.b, 0.9)
+                                            : "transparent")
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: wsPill.radius
+                                    visible: stateLabel === "active"
+                                    opacity: 0.92
+                                    gradient: Gradient {
+                                        // Softer "depth" gradient: slightly brighter top, slightly deeper bottom
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.mauve, 1.10) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.mauve, 1.18) }
+                                    }
+                                }
 
                                 scale: isHovered && stateLabel !== "active" ? 1.08 : 1.0
                                 Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutBack } }
@@ -1302,9 +1334,10 @@ Variants {
                                     opacity: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? 1.0 : 0.0) : (barWindow.isWifiOn ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.blue }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.blue, 1.3) }
+                                        // Subtle, less "neon" gradient to match dark bar
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.blue, 1.08) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.blue, 1.16) }
                                     }
                                 }
 
@@ -1357,9 +1390,9 @@ Variants {
                                     opacity: barWindow.isBtOn ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.mauve }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.mauve, 1.3) }
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.mauve, 1.08) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.mauve, 1.16) }
                                     }
                                 }
 
@@ -1407,9 +1440,9 @@ Variants {
                                     opacity: barWindow.isSoundActive ? 1.0 : 0.0
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: mocha.peach }
-                                        GradientStop { position: 1.0; color: Qt.lighter(mocha.peach, 1.3) }
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.peach, 1.07) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.peach, 1.17) }
                                     }
                                 }
                                 
@@ -1444,6 +1477,87 @@ Variants {
                                 MouseArea { id: volMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle volume"]) }
                             }
 
+                            // System Info (CPU, RAM, Temp)
+                            Rectangle {
+                                id: sysInfoPill
+                                property bool isHovered: sysInfoMouse.containsMouse
+                                color: isHovered ? Qt.rgba(mocha.surface1.r, mocha.surface1.g, mocha.surface1.b, 0.6) : Qt.rgba(mocha.surface0.r, mocha.surface0.g, mocha.surface0.b, 0.4)
+                                radius: barWindow.s(10); height: sysLayout.pillHeight;
+                                clip: true
+
+                                Rectangle {
+                                    anchors.fill: parent
+                                    radius: barWindow.s(10)
+                                    opacity: 1.0
+                                    Behavior on opacity { NumberAnimation { duration: 300 } }
+                                    gradient: Gradient {
+                                        orientation: Gradient.Vertical
+                                        GradientStop { position: 0.0; color: Qt.lighter(mocha.teal, 1.06) }
+                                        GradientStop { position: 1.0; color: Qt.darker(mocha.teal, 1.16) }
+                                    }
+                                }
+
+                                property real targetWidth: sysInfoLayout.width + barWindow.s(24)
+                                width: targetWidth
+                                Behavior on width { NumberAnimation { duration: 500; easing.type: Easing.OutQuint } }
+
+                                scale: isHovered ? 1.05 : 1.0
+                                Behavior on scale { NumberAnimation { duration: 250; easing.type: Easing.OutExpo } }
+                                Behavior on color { ColorAnimation { duration: 200 } }
+
+                                property bool initAnimTrigger: false
+                                Timer { running: rightContent.showLayout && !parent.initAnimTrigger; interval: 180; onTriggered: parent.initAnimTrigger = true }
+                                opacity: initAnimTrigger ? 1 : 0
+                                transform: Translate { y: parent.initAnimTrigger ? 0 : barWindow.s(15); Behavior on y { NumberAnimation { duration: 500; easing.type: Easing.OutBack } } }
+                                Behavior on opacity { NumberAnimation { duration: 400; easing.type: Easing.OutCubic } }
+
+                                Row {
+                                    id: sysInfoLayout; anchors.centerIn: parent; spacing: barWindow.s(4)
+                                    // Temp
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "󰔏"
+                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        color: mocha.base
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: barWindow.sysInfo.split(" ")[0]
+                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
+                                        color: mocha.base
+                                    }
+                                    // CPU
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "\uf2db" // Font Awesome: microchip
+                                        font.family: "Font Awesome 7 Free Solid"
+                                        font.pixelSize: barWindow.s(15)
+                                        color: mocha.base
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: barWindow.sysInfo.split(" ")[1]
+                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
+                                        color: mocha.base
+                                    }
+                                    // RAM
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: "\uf538" // Font Awesome: memory
+                                        font.family: "Font Awesome 7 Free Solid"
+                                        font.pixelSize: barWindow.s(15)
+                                        color: mocha.base
+                                    }
+                                    Text {
+                                        anchors.verticalCenter: parent.verticalCenter
+                                        text: barWindow.sysInfo.split(" ")[2]
+                                        font.family: "JetBrains Mono"; font.pixelSize: barWindow.s(13); font.weight: Font.Black;
+                                        color: mocha.base
+                                    }
+                                }
+                                MouseArea { id: sysInfoMouse; hoverEnabled: true; anchors.fill: parent; onClicked: Quickshell.execDetached(["bash", "-c", "~/.config/hypr/scripts/qs_manager.sh toggle sysinfo"]) }
+                            }
+
                             // Battery (or Power button for Desktop)
                             Rectangle {
                                 property bool isHovered: batMouse.containsMouse
@@ -1457,9 +1571,17 @@ Variants {
                                     opacity: 1.0 
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        orientation: Gradient.Horizontal
-                                        GradientStop { position: 0.0; color: barWindow.isDesktop ? mocha.red : barWindow.batDynamicColor; Behavior on color { ColorAnimation { duration: 300 } } }
-                                        GradientStop { position: 1.0; color: barWindow.isDesktop ? Qt.lighter(mocha.red, 1.3) : Qt.lighter(barWindow.batDynamicColor, 1.3); Behavior on color { ColorAnimation { duration: 300 } } }
+                                        orientation: Gradient.Vertical
+                                        GradientStop {
+                                            position: 0.0
+                                            color: barWindow.isDesktop ? Qt.lighter(mocha.red, 1.08) : Qt.lighter(barWindow.batDynamicColor, 1.08)
+                                            Behavior on color { ColorAnimation { duration: 300 } }
+                                        }
+                                        GradientStop {
+                                            position: 1.0
+                                            color: barWindow.isDesktop ? Qt.darker(mocha.red, 1.16) : Qt.darker(barWindow.batDynamicColor, 1.16)
+                                            Behavior on color { ColorAnimation { duration: 300 } }
+                                        }
                                     }
                                 }
                                 
