@@ -127,6 +127,7 @@ def maybe_apply_monochrome(flat_data):
         settings = {}
 
     mode = (settings.get("matugenAccentMode") or "").strip().lower()
+    mono_scope = (settings.get("matugenMonoScope") or "all").strip().lower()
     if settings.get("matugenMonochrome", False):
         mode = "monochrome"
     if mode == "":
@@ -138,9 +139,34 @@ def maybe_apply_monochrome(flat_data):
         "mauve", "pink", "yellow", "maroon", "teal",
     ]
     if mode == "monochrome":
-        for k in accent_keys:
-            if isinstance(flat_data.get(k), str):
-                flat_data[k] = _to_gray(flat_data[k])
+        # Monochrome scopes:
+        # - all: desaturate everything (surfaces + accents)
+        # - accents: only accent tokens become grayscale
+        # - surfaces: only surfaces/text become grayscale (accents stay colorful)
+        if mono_scope == "accents":
+            for k in accent_keys:
+                v = flat_data.get(k)
+                if isinstance(v, str) and v.startswith("#") and len(v) == 7:
+                    flat_data[k] = _to_gray(v)
+            return flat_data
+
+        if mono_scope == "surfaces":
+            surface_keys = [
+                "base", "mantle", "crust",
+                "text", "subtext0", "subtext1",
+                "surface0", "surface1", "surface2",
+                "overlay0", "overlay1", "overlay2",
+            ]
+            for k in surface_keys:
+                v = flat_data.get(k)
+                if isinstance(v, str) and v.startswith("#") and len(v) == 7:
+                    flat_data[k] = _to_gray(v)
+            return flat_data
+
+        # default: mono_scope == "all"
+        for k, v in list(flat_data.items()):
+            if isinstance(v, str) and v.startswith("#") and len(v) == 7:
+                flat_data[k] = _to_gray(v)
         return flat_data
 
     if mode == "balanced":
@@ -184,8 +210,11 @@ try:
     flat_data = flatten_colors(data)
     flat_data = maybe_apply_monochrome(flat_data)
     
-    with open(target_file, "w") as f:
+    # Atomic write so QML never reads partial JSON mid-write.
+    tmp_file = target_file + ".tmp"
+    with open(tmp_file, "w") as f:
         json.dump(flat_data, f, indent=4)
+    os.replace(tmp_file, target_file)
         
 except FileNotFoundError:
     pass

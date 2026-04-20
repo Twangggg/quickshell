@@ -1334,7 +1334,6 @@ Variants {
                                     opacity: barWindow.showEthernet ? (barWindow.ethStatus === "Connected" ? 1.0 : 0.0) : (barWindow.isWifiOn ? 1.0 : 0.0)
                                     Behavior on opacity { NumberAnimation { duration: 300 } }
                                     gradient: Gradient {
-                                        // Subtle, less "neon" gradient to match dark bar
                                         orientation: Gradient.Vertical
                                         GradientStop { position: 0.0; color: Qt.lighter(mocha.blue, 1.08) }
                                         GradientStop { position: 1.0; color: Qt.darker(mocha.blue, 1.16) }
