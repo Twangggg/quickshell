@@ -199,7 +199,7 @@ PanelWindow {
     }
 
     onIsVisibleChanged: {
-        if (isVisible) masterWindow.requestActivate();
+        if (isVisible) Qt.callLater(function() { widgetStack.forceActiveFocus(); });
     }
 
     Item {
