@@ -1,5 +1,5 @@
 {
-    "base": "#0d0d0d",
+    "base": "#0c0c0c",
     "mantle": "#1b1b1b",
     "crust": "#131313",
     "text": "#e2e2e2",
@@ -7,7 +7,7 @@
     "subtext1": "#909090",
     "surface0": "#1f1f1f",
     "surface1": "#292929",
-    "surface2": "#343434",
+    "surface2": "#323232",
     "overlay0": "#e2e2e2",
     "overlay1": "#e2e2e2",
     "overlay2": "#e2e2e2",

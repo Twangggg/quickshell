@@ -261,6 +261,16 @@ done
 if [ -f /tmp/lock_bg.png ]; then
     mkdir -p "$HOME/.config/rofi/images"
     cp -f /tmp/lock_bg.png "$HOME/.config/rofi/images/wallpaper.png" 2>/dev/null || true
+
+    # Also generate a small, fixed-size image for fast rofi startup.
+    # Doing this here avoids any delay when opening rofi.
+    if command -v magick >/dev/null 2>&1; then
+        # Make it taller than the rofi window so resizing lines won't rescale/tear the wallpaper.
+        magick /tmp/lock_bg.png -resize 1200x900^ -gravity center -extent 1200x900 \
+            "$HOME/.config/rofi/images/wallpaper_rofi.png" 2>/dev/null || true
+    else
+        cp -f /tmp/lock_bg.png "$HOME/.config/rofi/images/wallpaper_rofi.png" 2>/dev/null || true
+    fi
 fi
 
 # Reload Kitty instances
