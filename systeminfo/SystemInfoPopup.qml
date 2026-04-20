@@ -344,7 +344,7 @@ Item {
                     model: [
                         { title: "CPU", value: window.cpuValue, detail: window.cpuTemp + "°C  |  " + window.cpuFreq + " MHz", color: window.blue, revealDelay: 0 },
                         { title: "GPU", value: window.gpuValue, detail: window.gpuMemUsed + " / " + window.gpuMemTotal + " MiB", color: window.mauve, revealDelay: 120 },
-                        { title: "RAM", value: window.ramValue, detail: window.memoryFootprintText, color: window.sapphire, revealDelay: 240 }
+                        { title: "RAM", value: window.ramValue, detail: window.memoryFootprintText, color: window.blue, revealDelay: 240 }
                     ]
 
                     delegate: Rectangle {
@@ -517,11 +517,11 @@ Item {
 
                 Repeater {
                     model: [
-                        { title: "DISK I/O", value: "R " + window.netDown + " MB/s  |  W " + window.netUp + " MB/s", detail: "LIVE READ / WRITE THROUGHPUT", color: window.sapphire },
+                        { title: "DISK I/O", value: "R " + window.netDown + " MB/s  |  W " + window.netUp + " MB/s", detail: "LIVE READ / WRITE THROUGHPUT", color: window.blue },
                         { title: "SESSION", value: "IFACE " + window.ifaceName.toUpperCase() + "  |  UPTIME " + window.uptime, detail: "CURRENT LINK AND RUNTIME", color: window.blue },
-                        { title: "LOAD AVG", value: window.loadAvg, detail: "CURRENT SYSTEM LOAD", color: window.lavender },
+                        { title: "LOAD AVG", value: window.loadAvg, detail: "CURRENT SYSTEM LOAD", color: window.blue },
                         { title: "PROCESSES", value: window.procCount, detail: "ACTIVE TASK COUNT", color: window.blue },
-                        { title: "DISK STATUS", value: formatDiskUsage(), detail: "ROOT USAGE " + Math.round(window.diskValue) + "%", color: window.yellow },
+                        { title: "DISK STATUS", value: formatDiskUsage(), detail: "ROOT USAGE " + Math.round(window.diskValue) + "%", color: window.blue },
                         { title: "NETWORK", value: "↓ " + window.netDown + " MB/s  ↑ " + window.netUp + " MB/s", detail: "LINK " + window.ifaceName.toUpperCase(), color: window.blue }
                     ]
 
