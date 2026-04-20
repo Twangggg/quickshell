@@ -103,6 +103,7 @@ Item {
     readonly property real memUsedGiB: Number(memUsedMiB) / 1024
     property string memUsedMiB: "0"
     property string memTotalMiB: "0"
+    property bool introPlayed: false
 
     function updateHistories() {
         cpuHistory = cpuHistory.slice(1).concat([cpuValue])
@@ -187,21 +188,128 @@ Item {
         }
 
         Rectangle {
-            width: window.s(300)
+            width: window.s(280)
             height: width
             radius: width / 2
-            x: window.s(70)
-            y: window.s(100)
-            color: alpha(window.blue, 0.08)
+            x: window.s(80)
+            y: window.s(120)
+            color: alpha(window.blue, 0.15)
+            scale: 1.0
+            opacity: 0.8
+
+            property real movePhase: 0
+            NumberAnimation on movePhase { from: 0; to: 1; duration: 7000; loops: Animation.Infinite; easing.type: Easing.InOutSine }
+
+            onMovePhaseChanged: {
+                x = window.s(80) + Math.sin(movePhase * Math.PI * 2) * window.s(25)
+                y = window.s(120) + Math.cos(movePhase * Math.PI * 2) * window.s(20)
+            }
+
+            SequentialAnimation on scale {
+                loops: Animation.Infinite; running: true
+                NumberAnimation { to: 1.1; duration: 4000; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: 4000; easing.type: Easing.InOutSine }
+            }
         }
 
         Rectangle {
-            width: window.s(260)
+            width: window.s(200)
             height: width
             radius: width / 2
-            x: window.s(980)
-            y: window.s(360)
-            color: alpha(window.mauve, 0.06)
+            x: window.s(250)
+            y: window.s(350)
+            color: alpha(window.blue, 0.12)
+            scale: 1.0
+            opacity: 0.6
+
+            property real movePhase: 0
+            NumberAnimation on movePhase { from: 0; to: 1; duration: 8000; loops: Animation.Infinite; easing.type: Easing.InOutSine }
+
+            onMovePhaseChanged: {
+                x = window.s(250) + Math.sin(movePhase * Math.PI * 2) * window.s(20)
+                y = window.s(350) + Math.cos(movePhase * Math.PI * 2) * window.s(15)
+            }
+
+            SequentialAnimation on scale {
+                loops: Animation.Infinite; running: true
+                NumberAnimation { to: 1.08; duration: 4000; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: 4000; easing.type: Easing.InOutSine }
+            }
+        }
+
+        Rectangle {
+            width: window.s(240)
+            height: width
+            radius: width / 2
+            x: window.s(650)
+            y: window.s(100)
+            color: alpha(window.mauve, 0.12)
+            scale: 1.0
+            opacity: 0.7
+
+            property real movePhase: 0
+            NumberAnimation on movePhase { from: 0; to: 1; duration: 7500; loops: Animation.Infinite; easing.type: Easing.InOutSine }
+
+            onMovePhaseChanged: {
+                x = window.s(650) + Math.sin(movePhase * Math.PI * 2) * window.s(20)
+                y = window.s(100) + Math.cos(movePhase * Math.PI * 2) * window.s(15)
+            }
+
+            SequentialAnimation on scale {
+                loops: Animation.Infinite; running: true
+                NumberAnimation { to: 1.1; duration: 5000; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: 5000; easing.type: Easing.InOutSine }
+            }
+        }
+
+        Rectangle {
+            width: window.s(200)
+            height: width
+            radius: width / 2
+            x: window.s(800)
+            y: window.s(280)
+            color: alpha(window.mauve, 0.15)
+            scale: 1.0
+            opacity: 0.8
+
+            property real movePhase: 0
+            NumberAnimation on movePhase { from: 0; to: 1; duration: 6500; loops: Animation.Infinite; easing.type: Easing.InOutSine }
+
+            onMovePhaseChanged: {
+                x = window.s(800) + Math.sin(movePhase * Math.PI * 2) * window.s(15)
+                y = window.s(280) + Math.cos(movePhase * Math.PI * 2) * window.s(20)
+            }
+
+            SequentialAnimation on scale {
+                loops: Animation.Infinite; running: true
+                NumberAnimation { to: 1.06; duration: 4000; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: 4000; easing.type: Easing.InOutSine }
+            }
+        }
+
+        Rectangle {
+            width: window.s(160)
+            height: width
+            radius: width / 2
+            x: window.s(720)
+            y: window.s(460)
+            color: alpha(window.teal, 0.12)
+            scale: 1.0
+            opacity: 0.6
+
+            property real movePhase: 0
+            NumberAnimation on movePhase { from: 0; to: 1; duration: 9000; loops: Animation.Infinite; easing.type: Easing.InOutSine }
+
+            onMovePhaseChanged: {
+                x = window.s(720) + Math.sin(movePhase * Math.PI * 2) * window.s(15)
+                y = window.s(460) + Math.cos(movePhase * Math.PI * 2) * window.s(15)
+            }
+
+            SequentialAnimation on scale {
+                loops: Animation.Infinite; running: true
+                NumberAnimation { to: 1.12; duration: 4500; easing.type: Easing.InOutSine }
+                NumberAnimation { to: 1.0; duration: 4500; easing.type: Easing.InOutSine }
+            }
         }
 
         ColumnLayout {
@@ -209,20 +317,20 @@ Item {
             anchors.margins: window.s(18)
             spacing: window.s(14)
 
-            RowLayout {
-                Layout.fillWidth: true
-                Item { Layout.fillWidth: true }
+            // RowLayout {
+            //     Layout.fillWidth: true
+            //     Item { Layout.fillWidth: true }
 
-                Text {
-                    text: window.cpuModel
-                    font.family: "JetBrains Mono"
-                    font.pixelSize: window.s(11)
-                    color: alpha(window.subtext0, 0.9)
-                    elide: Text.ElideRight
-                    Layout.preferredWidth: window.s(420)
-                    horizontalAlignment: Text.AlignRight
-                }
-            }
+            //     Text {
+            //         text: window.cpuModel
+            //         font.family: "JetBrains Mono"
+            //         font.pixelSize: window.s(11)
+            //         color: alpha(window.subtext0, 0.9)
+            //         elide: Text.ElideRight
+            //         Layout.preferredWidth: window.s(420)
+            //         horizontalAlignment: Text.AlignRight
+            //     }
+            // }
 
             RowLayout {
                 Layout.fillWidth: true
@@ -250,17 +358,13 @@ Item {
                         border.color: alpha(window.surface2, 0.55)
                         property real targetPercent: modelData.value
                         property real displayPercent: 0
-                        property bool introPlayed: false
 
-                        onTargetPercentChanged: {
-                            displayPercent = targetPercent
+                        Behavior on displayPercent {
+                            NumberAnimation { duration: 1200; easing.type: Easing.OutQuint }
                         }
 
-                        Timer {
-                            id: introStart
-                            interval: modelData.revealDelay
-                            repeat: false
-                            onTriggered: {
+                        onTargetPercentChanged: {
+                            if (window.introPlayed) {
                                 gaugeCard.displayPercent = gaugeCard.targetPercent
                             }
                         }
@@ -270,20 +374,14 @@ Item {
                             interval: modelData.revealDelay + 1200
                             repeat: false
                             onTriggered: {
-                                gaugeCard.introPlayed = true
+                                window.introPlayed = true
+                                gaugeCard.displayPercent = gaugeCard.targetPercent
                             }
                         }
 
                         Component.onCompleted: {
-                            introStart.restart()
+                            gaugeCard.displayPercent = gaugeCard.targetPercent
                             introFinish.restart()
-                        }
-
-                        Behavior on displayPercent {
-                            enabled: !gaugeCard.introPlayed
-                            SequentialAnimation {
-                                NumberAnimation { duration: 1100; easing.type: Easing.OutCubic }
-                            }
                         }
 
                         ColumnLayout {
@@ -332,28 +430,33 @@ Item {
                                 }
 
                                 Rectangle {
+                                    id: breathRect
                                     width: window.s(166)
                                     height: width
                                     radius: width / 2
                                     anchors.centerIn: gaugeCanvas
-                                    color: alpha(modelData.color, 0.06)
-                                    border.width: 1
-                                    border.color: alpha(modelData.color, 0.12)
-                                    scale: 0.96
-                                    opacity: 0.42
+                                    color: alpha(modelData.color, 0.18)
+                                    border.width: 1.5
+                                    border.color: alpha(modelData.color, 0.35)
+                                    scale: 1.04
+                                    opacity: 0.7
 
-                                    SequentialAnimation on scale {
+                                    Timer {
+                                        id: breathTimer
+                                        interval: 16 
                                         running: true
-                                        loops: Animation.Infinite
-                                        NumberAnimation { to: 1.04; duration: 1700; easing.type: Easing.InOutSine }
-                                        NumberAnimation { to: 0.96; duration: 1700; easing.type: Easing.InOutSine }
-                                    }
+                                        repeat: true
 
-                                    SequentialAnimation on opacity {
-                                        running: true
-                                        loops: Animation.Infinite
-                                        NumberAnimation { to: 0.68; duration: 1700; easing.type: Easing.InOutSine }
-                                        NumberAnimation { to: 0.42; duration: 1700; easing.type: Easing.InOutSine }
+                                        readonly property real duration: 5000
+                                        readonly property real pi2: Math.PI * 2
+
+                                        onTriggered: {
+                                            var elapsed = new Date().getTime() % duration
+                                            var t = elapsed / duration
+                                            var sinVal = Math.sin(t * pi2)
+                                            breathRect.scale = 1.04 + sinVal * 0.04
+                                            breathRect.opacity = 0.7 + sinVal * 0.15
+                                        }
                                     }
                                 }
 

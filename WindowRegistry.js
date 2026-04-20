@@ -40,7 +40,7 @@ let base = {
 
 "battery": { w: s(801, scale), h: s(760, scale), rx: mw - s(821, scale), ry: s(70, scale), comp: "battery/BatteryPopup.qml" },
 
-  "sysinfo": { w: s(820, scale), h: s(540, scale), rx: mw - s(840, scale), ry: s(70, scale), comp: "systeminfo/SystemInfoPopup.qml" },
+  "sysinfo": { w: s(820, scale), h: s(480, scale), rx: mw - s(840, scale), ry: s(70, scale), comp: "systeminfo/SystemInfoPopup.qml" },
 
   "volume": { w: s(480, scale), h: s(760, scale), rx: mw - s(500, scale), ry: s(70, scale), comp: "volume/VolumePopup.qml" },
 
