@@ -69,7 +69,9 @@ Item {
     readonly property color green: _theme.green
     readonly property color mauve: _theme.mauve
     readonly property color sapphire: _theme.sapphire
-    readonly property color lavender: _theme.lavender
+    // Matugen template doesn't currently emit a dedicated "lavender" token.
+    // Map it to a stable accent to avoid falling back to black/undefined.
+    readonly property color lavender: _theme.blue
 
     property string cpuPercent: "0"
     property string ramPercent: "0"

@@ -524,7 +524,7 @@ Variants {
                     }
                 }
             }
-Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/battery_wait.sh"]; onExited: { batteryPoller.running = false; batteryPoller.running = true; } }
+            Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/quickshell/watchers/battery_wait.sh"]; onExited: { batteryPoller.running = false; batteryPoller.running = true; } }
 
             // --- SYSINFO ---
             Process {
@@ -1509,8 +1509,9 @@ Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/qui
                                     // CPU
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: "󰘚"
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        text: "\uf2db" // Font Awesome: microchip
+                                        font.family: "Font Awesome 7 Free Solid"
+                                        font.pixelSize: barWindow.s(15)
                                         color: mocha.base
                                     }
                                     Text {
@@ -1522,8 +1523,9 @@ Process { id: batteryWaiter; command: ["bash", "-c", "~/.config/hypr/scripts/qui
                                     // RAM
                                     Text {
                                         anchors.verticalCenter: parent.verticalCenter
-                                        text: "󰏰"
-                                        font.family: "Iosevka Nerd Font"; font.pixelSize: barWindow.s(16);
+                                        text: "\uf538" // Font Awesome: memory
+                                        font.family: "Font Awesome 7 Free Solid"
+                                        font.pixelSize: barWindow.s(15)
                                         color: mocha.base
                                     }
                                     Text {
